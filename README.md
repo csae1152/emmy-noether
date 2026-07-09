@@ -2,58 +2,58 @@
 
 *Noise-aware quantum compiler passes based on fractal / long-memory noise modeling*
 
-Ein noise-aware Compiler-Baustein fuer Quantenschaltkreise: statt Routing/
-Scheduling und Dynamical-Decoupling-Sequenzen nur auf Gate-Anzahl bzw. ein
-starres Pulsraster zu optimieren, wird ein **zeitvariabler (lokaler)
-Hurst-Exponent** aus Kalibrierungsdaten geschaetzt (Detrended Fluctuation
-Analysis) und daraus eine angepasste DD-Sequenz sowie eine rauschbewusste
-Fidelity-Kostenfunktion abgeleitet.
+A noise-aware compiler building block for quantum circuits: instead of
+optimizing routing/scheduling and dynamical-decoupling sequences purely on
+gate count or a fixed pulse grid, a **time-varying (local) Hurst exponent**
+is estimated from calibration data (Detrended Fluctuation Analysis), and an
+adapted DD sequence as well as a noise-aware fidelity cost function are
+derived from it.
 
-Hintergrund und Motivation: siehe Chatverlauf zu "memory multi-fractional
-Brownian motion" (mmfBm) in supraleitenden/Ionenfallen-Qubits und die
-Ionenfallen-/AQT-/Quantum-Hub-Tirol-Diskussion (Innsbruck).
+Background and motivation: see the chat history on "memory multi-fractional
+Brownian motion" (mmfBm) in superconducting/trapped-ion qubits, and the
+trapped-ion / AQT / Quantum Hub Tirol discussion (Innsbruck).
 
-## Architektur
+## Architecture
 
 ```
 emmy-noether/
-├── core/                    Rust-Kernbibliothek (kein Python noetig)
+├── core/                    Rust core library (no Python required)
 │   └── src/
-│       ├── hurst.rs         DFA-Schaetzung des (lokalen) Hurst-Exponenten
-│       ├── noise_gen.rs     synthetisches farbiges Rauschen (fuer Tests)
-│       ├── dd_synth.rs      Hurst-abhaengige DD-Sequenz-Synthese
-│       ├── cost.rs          rauschbewusste Fidelity-/Kostenfunktion
-│       └── lib.rs           High-Level-API, verbindet alle Module
-├── pybindings/               PyO3-Bindings -> Python-Modul `emmy_noether`
+│       ├── hurst.rs         DFA estimation of the (local) Hurst exponent
+│       ├── noise_gen.rs     synthetic colored noise (for testing)
+│       ├── dd_synth.rs      Hurst-dependent DD sequence synthesis
+│       ├── cost.rs          noise-aware fidelity/cost function
+│       └── lib.rs           high-level API, ties all modules together
+├── pybindings/               PyO3 bindings -> Python module `emmy_noether`
 │   └── src/lib.rs
 ├── examples/
-│   └── qiskit_pass.py       echter Qiskit TransformationPass, der die
-│                             Rust-Engine nutzt (lauffaehig demonstriert)
-└── README.md                 dieses Dokument
+│   └── qiskit_pass.py       a real Qiskit TransformationPass that uses
+│                             the Rust engine (demonstrated working)
+└── README.md                 this document
 ```
 
-## Bauen und Testen
+## Building and Testing
 
-Core-Bibliothek (reines Rust, 12 Unit-/Integrationstests):
+Core library (pure Rust, 12 unit/integration tests):
 
 ```bash
 cd core
 cargo test --release
 ```
 
-Python-Bindings (PyO3, benoetigt Python-Dev-Header):
+Python bindings (PyO3, requires Python dev headers):
 
 ```bash
 cd pybindings
 cargo build --release
-# Da dies ein Cargo-Workspace ist, landet der Output im Workspace-Root:
-# erzeugt ../target/release/libemmy_noether.so
-# fuer den Python-Import umbenennen/kopieren als emmy_noether.so
-# (produktiv: `pip install maturin && maturin build --release` verwenden,
-# das erledigt Benennung/Wheel-Verpackung automatisch)
+# Since this is a Cargo workspace, the output lands in the workspace root:
+# produces ../target/release/libemmy_noether.so
+# rename/copy it as emmy_noether.so for the Python import
+# (in production, use `pip install maturin && maturin build --release`,
+# which handles naming/wheel packaging automatically)
 ```
 
-Qiskit-Integrationsbeispiel (setzt Qiskit >= 2.0 voraus):
+Qiskit integration example (requires Qiskit >= 2.0):
 
 ```bash
 cd examples
@@ -61,48 +61,48 @@ cp ../target/release/libemmy_noether.so ./emmy_noether.so
 python3 qiskit_pass.py
 ```
 
-Alle drei Schritte wurden beim Erstellen dieses Prototyps tatsaechlich
-ausgefuehrt und funktionieren End-to-End (12/12 Rust-Tests gruen, PyO3-Modul
-importierbar, Qiskit-Pass laeuft und fuegt sichtbar Pulse in den Schaltkreis ein).
+All three steps were actually executed while building this prototype and
+work end-to-end (12/12 Rust tests passing, PyO3 module importable, Qiskit
+pass runs and visibly inserts pulses into the circuit).
 
-## Was hier WIRKLICH validiert ist -- und was nicht
+## What Is ACTUALLY Validated Here -- and What Is Not
 
-**Validiert (durch Tests/Ausfuehrung in diesem PoC):**
-- Die DFA-Implementierung unterscheidet zuverlaessig zwischen synthetischem
-  weissem Rauschen (H ~ 0.5) und synthetischem persistentem Rauschen (Ziel-H
-  0.9 -> geschaetztes H deutlich hoeher).
-- Die DD-Synthese erzeugt bei hoeherem geschaetzten H tatsaechlich groessere
-  Pulsabstaende und respektiert die Hardware-Mindestpulsluecke.
-- Die gesamte Pipeline (Kalibrierungsreihe -> H-Schaetzung -> DD-Sequenz ->
-  Qiskit-Pass) laeuft technisch durchgaengig durch.
+**Validated (via tests/execution in this PoC):**
+- The DFA implementation reliably distinguishes between synthetic white
+  noise (H ~ 0.5) and synthetic persistent noise (target H 0.9 -> estimated
+  H clearly higher).
+- The DD synthesis produces larger pulse spacing for higher estimated H and
+  respects the hardware minimum pulse gap.
+- The entire pipeline (calibration series -> H estimation -> DD sequence ->
+  Qiskit pass) runs through technically end-to-end.
 
-**NICHT validiert (das ist der ehrliche Kern, bevor man daraus ein Produkt
-oder einen Foerderantrag macht):**
-- Der Zusammenhang H -> Pulsabstand (`dd_synth.rs`) ist eine plausible,
-  aber selbst konstruierte Heuristik -- keine aus einer Filterfunktionsanalyse
-  hergeleitete optimale Sequenz.
-- Der Streckungsexponent p(H) = 2H in `cost.rs` ist eine vereinfachende
-  Modellannahme, keine aus den zitierten Papers uebernommene Formel.
-- Es wurden ausschliesslich SYNTHETISCHE Testdaten verwendet, keine echten
-  Kalibrierungsmessungen von realer Hardware (AQT, IBM, o.ae.).
-- Es gibt noch keinen Vergleich gegen einen echten Baseline-Compiler-Pass
-  (z.B. Qiskit's PadDynamicalDecoupling) auf echter oder simulierter
-  Hardware mit Rauschmodell.
+**NOT validated (this is the honest core to keep in mind before turning this
+into a product or a grant application):**
+- The relationship H -> pulse spacing (`dd_synth.rs`) is a plausible but
+  self-constructed heuristic -- not an optimal sequence derived from a
+  filter-function analysis.
+- The stretching exponent p(H) = 2H in `cost.rs` is a simplifying model
+  assumption, not a formula taken from the cited papers.
+- Only SYNTHETIC test data has been used so far, no real calibration
+  measurements from actual hardware (AQT, IBM, etc.).
+- There is not yet a comparison against a real baseline compiler pass (e.g.
+  Qiskit's PadDynamicalDecoupling) on real or simulated hardware with a
+  noise model.
 
-## Naechste sinnvolle Schritte
+## Sensible Next Steps
 
-1. Mit echten Ramsey-/Echo-Kalibrierungsdaten (z.B. von AQT oder einem IBM-
-   Backend ueber Qiskit Runtime) die DFA-Schaetzung testen -- passt das
-   geschaetzte H(t) zu publizierten Werten fuer die jeweilige Plattform?
-2. Die DD-Synthese-Heuristik durch eine echte Filterfunktions-Optimierung
-   ersetzen oder zumindest dagegen benchmarken.
-3. Kooperation mit einer Rauschcharakterisierungs-Gruppe (z.B. IQOQI
-   Innsbruck) suchen, um die Modellannahmen fachlich zu pruefen, bevor
-   daraus eine Foerderantrag-/Firmen-Erzaehlung wird.
-4. Reales Benchmark gegen `PadDynamicalDecoupling` (Qiskit) und/oder pytket's
-   DD-Passes auf einem Simulator mit realistischem 1/f-Rauschmodell.
+1. Test the DFA estimation against real Ramsey/echo calibration data (e.g.
+   from AQT or an IBM backend via Qiskit Runtime) -- does the estimated
+   H(t) match published values for the respective platform?
+2. Replace the DD synthesis heuristic with an actual filter-function
+   optimization, or at least benchmark it against one.
+3. Seek collaboration with a noise-characterization group (e.g. IQOQI
+   Innsbruck) to have the model assumptions reviewed by domain experts
+   before turning this into a grant application or company narrative.
+4. Real benchmark against Qiskit's `PadDynamicalDecoupling` and/or pytket's
+   DD passes on a simulator with a realistic 1/f noise model.
 
-Kurz: Das hier ist ein funktionierendes technisches Skelett, das zeigt, WIE
-sich die Idee in eine Compiler-Pipeline einbauen laesst -- der physikalische
-Beweis, dass die Idee tatsaechlich bessere Fidelity liefert als Standard-DD,
-steht noch aus und ist der naechste, wichtigste Schritt.
+In short: this is a working technical skeleton that shows HOW the idea can
+be built into a compiler pipeline -- the physical proof that the idea
+actually delivers better fidelity than standard DD is still outstanding,
+and is the next, most important step.
