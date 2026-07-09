@@ -9,9 +9,6 @@ is estimated from calibration data (Detrended Fluctuation Analysis), and an
 adapted DD sequence as well as a noise-aware fidelity cost function are
 derived from it.
 
-Background and motivation: see the chat history on "memory multi-fractional
-Brownian motion" (mmfBm) in superconducting/trapped-ion qubits, and the
-trapped-ion / AQT / Quantum Hub Tirol discussion (Innsbruck).
 
 ## Architecture
 
