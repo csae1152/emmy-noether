@@ -1,0 +1,14 @@
+[package]
+name = "emmy-noether-pybindings"
+version = "0.1.0"
+edition = "2021"
+description = "Python-Bindings (PyO3) fuer emmy-noether-core, nutzbar als Qiskit/pytket Transpiler-Pass-Helfer"
+license = "MIT"
+
+[lib]
+name = "emmy_noether"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+emmy-noether-core = { path = "../core" }
+pyo3 = { version = "0.20", features = ["extension-module"] }

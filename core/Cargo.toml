@@ -1,0 +1,18 @@
+[package]
+name = "emmy-noether-core"
+version = "0.1.0"
+edition = "2021"
+description = "Proof-of-concept: fraktale/langzeit-korrelierte Rauschmodellierung (mmfBm-inspiriert) fuer noise-aware Quantencompiler-Passes"
+license = "MIT"
+
+[lib]
+name = "emmy_noether_core"
+path = "src/lib.rs"
+
+[dependencies]
+rand = "0.8"
+rand_distr = "0.4"
+rustfft = "6.2"
+
+[dev-dependencies]
+approx = "0.5"
