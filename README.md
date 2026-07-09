@@ -10,7 +10,7 @@ adapted DD sequence as well as a noise-aware fidelity cost function are
 derived from it.
 
 
-## Architecture
+## Architecture Overview
 
 ```
 emmy-noether/
